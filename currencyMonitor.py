@@ -4,6 +4,7 @@ import requests
 import numpy as np
 import argparse
 import sys
+from datetime import date
 
 logger = None
 
@@ -39,8 +40,10 @@ def getCurrencyConversionRates(
                 f"{base_currency} to {dest_currency} :"
                 f"{conversion_rate}"
             )
-            logger.info(conversion_rate_log_string)
-            print(conversion_rate_log_string)  # For the assigment
+            logger.debug(conversion_rate_log_string)
+            now = date.today()
+            date_time_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            print(date_time_string, conversion_rate_log_string)  # For the assigment
             return conversion_rate
         else:
             logger.error(f"Respose failed with status code" f"{response.status_code}")
@@ -119,12 +122,19 @@ def main():
         logger.debug("Sampling API")
         if timer >= 60:
             average_logger_bool = True
-            logger.info(
-                f"Average Current Exchange rate in last 60  "
-                f"seconds between {base_currency} and {dest_currency} "
-                f"is {np.average(currency_rates)}"
-            )
+            if len(currency_rates) == 0:
+                logger.info(
+                    "Currency exchange rates were not captured in the last"
+                    " 60 seconds due to errors"
+                )
+            else:
+                logger.info(
+                    f"Average Current Exchange rate in last 60  "
+                    f"seconds between {base_currency} and {dest_currency} "
+                    f"is {np.average(currency_rates)}"
+                )
             timer = 0
+            currency_rates = np.array([])
         exchange_rate = getCurrencyConversionRates(
             base_currency, dest_currency, api_key
         )
@@ -132,17 +142,23 @@ def main():
             currency_rates = np.append(currency_rates, exchange_rate)
         else:
             logger.debug(
-                "Current Exchange rate while calculating average  "
+                "Skipping current Exchange rate while calculating average  "
                 "since there had been an error"
             )
         sleep(sample_rate_sec)
         timer = timer + sample_rate_sec
         sample_interval_sec = sample_interval_sec - sample_rate_sec
     if not average_logger_bool:
-        logger.info(
-            f"Average exchange rate over {args.duration} "
-            f"seconds is {np.average(currency_rates)}"
-        )
+        if len(currency_rates) == 0:
+            logger.warning(
+                "Currency Exchange rates were not captured in the last"
+                "60 seconds due to errors"
+            )
+        else:
+            logger.info(
+                f"Average exchange rate over {args.duration} "
+                f"seconds is {np.average(currency_rates)}"
+            )
 
 
 if __name__ == "__main__":
