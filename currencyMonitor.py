@@ -28,12 +28,6 @@ def getCurrencyConversionRates(
         response = requests.get(api_url)
         if response.status_code == 200:
             data = response.json()
-            if dest_currency not in data["conversion_rates"]:
-                logger.error(
-                    f"{dest_currency} currency exchange rate was "
-                    f"not listed for {base_currency}"
-                )
-                return None
             conversion_rate = data["conversion_rates"][dest_currency]
             conversion_rate_log_string = (
                 f"Conversion rate from "
@@ -51,6 +45,12 @@ def getCurrencyConversionRates(
     except requests.exceptions.RequestException as e:
         logger.error(f"Failure to reach  {api_url}, " f"failed with expecption {e}")
         return None
+    except KeyError as e:
+        logger.error(
+            f"Failure to get the conversion rates from {base_currency} to "
+            f"{dest_currency} falied with exception {e}"
+        )
+        sys.exit(1)
 
 
 def main():
